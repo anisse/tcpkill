@@ -25,11 +25,18 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
     }
     let stream = unsafe { std::net::TcpStream::from_raw_fd(sock.raw()) };
 
-    if let Ok(local) = stream.local_addr() {
-        if let Ok(peer) = stream.peer_addr() {
-            println!("{} --> {}", local, peer);
-        }
+    match stream.take_error() {
+        Err(x) => return Err(x.to_string()),
+        Ok(Some(e)) => return Err(e.to_string()),
+        Ok(None) => {}
     }
+    let peer = stream
+        .peer_addr()
+        .map_err(|e| format!("No peer address, socket is probably not established: {e}"))?;
+    let local = stream
+        .local_addr()
+        .map_err(|e| format!("No local address, socket is probably not established: {e}"))?;
+    println!("{} --> {}", local, peer);
     /* ensures it will send an RST upon shutdown to let the other side know to close the stream */
     stream
         .set_linger(Some(std::time::Duration::from_secs(0)))
