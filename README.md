@@ -13,5 +13,4 @@ cargo +nightly build --release
 # TODO
 
  * drop need for rust nightly
- * handle errors instead of expect (panics)
  * search by connection instead of fd
