@@ -50,6 +50,8 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
         },
     )
     .map_err(|e| format!("cannot linger: {}", ioErr::from(e)))?;
+    /* Forget about socket to prevent closing it twice */
+    std::mem::forget(sock);
     stream
         .shutdown(std::net::Shutdown::Both)
         .map_err(|e| format!("cannot shutdown: {e}"))?;
