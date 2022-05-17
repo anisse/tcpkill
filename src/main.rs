@@ -1,9 +1,7 @@
-#![feature(tcp_linger)]
-
 use std::error::Error;
 use std::io::Error as ioErr;
 use std::{env, os::unix::prelude::FromRawFd};
-use uapi::{getsockopt, pidfd_getfd, pidfd_open};
+use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
 fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
     let fd = pidfd_open(pid, 0).map_err(|e| format!("Cannot open pid: {}", ioErr::from(e)))?;
@@ -37,10 +35,21 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
         .local_addr()
         .map_err(|e| format!("No local address, socket is probably not established: {e}"))?;
     println!("{} --> {}", local, peer);
-    /* ensures it will send an RST upon shutdown to let the other side know to close the stream */
-    stream
-        .set_linger(Some(std::time::Duration::from_secs(0)))
-        .map_err(|e| format!("cannot linger: {e}"))?;
+    /* ensures it will send an RST upon shutdown to let the other side know to close the stream
+     * ugly: re-uses the fd we had previously and put in TcpStream, but this is because we don't
+     * want to rely on nightly's feature(tcp_linger). We also don't want to set linger before the
+     * previous checks on the socket.
+     * */
+    setsockopt(
+        sock.raw(),
+        uapi::c::SOL_SOCKET,
+        uapi::c::SO_LINGER,
+        &uapi::c::linger {
+            l_onoff: 1,
+            l_linger: 0,
+        },
+    )
+    .map_err(|e| format!("cannot linger: {}", ioErr::from(e)))?;
     stream
         .shutdown(std::net::Shutdown::Both)
         .map_err(|e| format!("cannot shutdown: {e}"))?;

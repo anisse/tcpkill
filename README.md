@@ -4,13 +4,12 @@ small tool to open a tcp socket from a given pid and shut it down, killing the c
 
 Does not need to have any traffic on the socket, like the original tcpkill. Original idea from [@bradfitz](https://twitter.com/bradfitz/status/1522651333085462528); [his Go PoC](https://go.dev/play/p/UGVZEdt-Sd0)
 
-Currently needs nightly, build with:
+Build with:
 ```
-cargo +nightly build --release
+cargo build --release
 ```
 
 
 # TODO
 
- * drop need for rust nightly
  * search by connection instead of fd
