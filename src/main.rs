@@ -1,10 +1,12 @@
 use std::error::Error;
-use std::io::Error as ioErr;
+use std::io::Error as IoErr;
+use std::net::{Shutdown, TcpStream};
 use std::{env, os::unix::prelude::FromRawFd};
+
 use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
 fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
-    let fd = pidfd_open(pid, 0).map_err(|e| format!("Cannot open pid: {}", ioErr::from(e)))?;
+    let fd = pidfd_open(pid, 0).map_err(|e| format!("Cannot open pid: {}", IoErr::from(e)))?;
     let sock = pidfd_getfd(fd.raw(), targetfd, 0).map_err(|e| match e.0 {
         uapi::c::EPERM => String::from(
             "Cannot get fd from process, \
@@ -12,16 +14,16 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
             you disabled yama ptrace_scope: \
             echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope",
         ),
-        _ => ioErr::from(e).to_string(),
+        _ => IoErr::from(e).to_string(),
     })?;
 
     let mut val: i32 = 0;
     getsockopt(sock.raw(), uapi::c::SOL_SOCKET, uapi::c::SO_TYPE, &mut val)
-        .map_err(|e| format!("getsockopt error on fd: {}", ioErr::from(e)))?;
+        .map_err(|e| format!("getsockopt error on fd: {}", IoErr::from(e)))?;
     if val != uapi::c::SOCK_STREAM {
         return Err("fd {targetfd} is not a TCP socket".to_string());
     }
-    let stream = unsafe { std::net::TcpStream::from_raw_fd(sock.raw()) };
+    let stream = unsafe { TcpStream::from_raw_fd(sock.raw()) };
 
     match stream.take_error() {
         Err(x) => return Err(x.to_string()),
@@ -49,11 +51,11 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
             l_linger: 0,
         },
     )
-    .map_err(|e| format!("cannot linger: {}", ioErr::from(e)))?;
+    .map_err(|e| format!("cannot linger: {}", IoErr::from(e)))?;
     /* Forget about socket to prevent closing it twice */
     std::mem::forget(sock);
     stream
-        .shutdown(std::net::Shutdown::Both)
+        .shutdown(Shutdown::Both)
         .map_err(|e| format!("cannot shutdown: {e}"))?;
     Ok(())
 }
