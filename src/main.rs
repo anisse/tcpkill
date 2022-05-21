@@ -1,8 +1,9 @@
 use std::error::Error;
 use std::io::Error as IoErr;
 use std::net::{Shutdown, TcpStream};
-use std::{env, os::unix::prelude::FromRawFd};
+use std::os::unix::prelude::FromRawFd;
 
+use clap::Parser;
 use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
 fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
@@ -60,20 +61,20 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 3 {
-        let name = args.get(0).ok_or("Called without argv[0]")?;
-        return Err(format!("Usage: {name} <pid> <sock-fd>").into());
-    }
-    let pid = args[1]
-        .parse()
-        .map_err(|_| "First argument (PID) is not an integer".to_string())?;
-    let targetfd = args[2]
-        .parse()
-        .map_err(|_| "Second argument (target socket fd) is not an integer".to_string())?;
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    /// PID that has the TCP connection
+    #[clap(short = 'p', long)]
+    pid: u32,
+    /// Socket file descriptor number
+    #[clap(short = 'f', long)]
+    fd: u32,
+}
 
-    tcpkill(pid, targetfd)?;
+fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+    tcpkill(cli.pid as i32, cli.fd as i32)?;
 
     Ok(())
 }
