@@ -3,7 +3,7 @@ use std::io::Error as IoErr;
 use std::net::{Shutdown, TcpStream};
 use std::os::unix::prelude::FromRawFd;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
 fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
@@ -64,17 +64,26 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
-    /// PID that has the TCP connection
-    #[clap(short = 'p', long)]
-    pid: u32,
-    /// Socket file descriptor number
-    #[clap(short = 'f', long)]
-    fd: u32,
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Kill a single TCP connection by PID+FD
+    Single {
+        /// PID that has the TCP connection
+        pid: u32,
+        /// Socket file descriptor number
+        fd: u32,
+    },
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-    tcpkill(cli.pid as i32, cli.fd as i32)?;
+    match &cli.command {
+        Commands::Single { pid, fd } => tcpkill(*pid as i32, *fd as i32)?,
+    }
 
     Ok(())
 }
