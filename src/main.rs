@@ -6,6 +6,33 @@ use std::os::unix::prelude::FromRawFd;
 use clap::{Parser, Subcommand};
 use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
+#[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Kill a single TCP connection by PID+FD
+    Single {
+        /// PID that has the TCP connection
+        pid: u32,
+        /// Socket file descriptor number
+        fd: u32,
+    },
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+    match &cli.command {
+        Commands::Single { pid, fd } => tcpkill(*pid as i32, *fd as i32)?,
+    }
+
+    Ok(())
+}
+
 fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
     let fd = pidfd_open(pid, 0).map_err(|e| format!("Cannot open pid: {}", IoErr::from(e)))?;
     let sock = pidfd_getfd(fd.raw(), targetfd, 0).map_err(|e| match e.0 {
@@ -58,32 +85,5 @@ fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
     stream
         .shutdown(Shutdown::Both)
         .map_err(|e| format!("cannot shutdown: {e}"))?;
-    Ok(())
-}
-
-#[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
-struct Cli {
-    #[clap(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Kill a single TCP connection by PID+FD
-    Single {
-        /// PID that has the TCP connection
-        pid: u32,
-        /// Socket file descriptor number
-        fd: u32,
-    },
-}
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let cli = Cli::parse();
-    match &cli.command {
-        Commands::Single { pid, fd } => tcpkill(*pid as i32, *fd as i32)?,
-    }
-
     Ok(())
 }
