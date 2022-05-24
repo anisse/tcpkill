@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::io::Error as IoErr;
-use std::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, SocketAddrV4, SocketAddrV6, TcpStream};
+use std::net::{
+    IpAddr, Ipv4Addr, Ipv6Addr, Shutdown, SocketAddr, SocketAddrV4, SocketAddrV6, TcpStream,
+};
 use std::os::unix::prelude::FromRawFd;
 
 use clap::{Parser, Subcommand};
@@ -100,8 +102,23 @@ struct Stream {
 
 impl std::fmt::Display for Stream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>47}\t{:>47}", self.local, self.remote)
+        write!(
+            f,
+            "{}\t{}",
+            format_addr(self.local),
+            format_addr(self.remote)
+        )
     }
+}
+fn format_addr(addr: SocketAddr) -> String {
+    format!(
+        "{:>41}:{:<5}",
+        match addr.ip() {
+            IpAddr::V4(v4) => format!("{v4}"),
+            IpAddr::V6(v6) => format!("[{v6}]"), // TODO: ignores scope
+        },
+        addr.port()
+    )
 }
 
 fn list() -> Result<(), String> {
