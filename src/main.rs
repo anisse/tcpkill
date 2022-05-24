@@ -231,21 +231,6 @@ fn proc_net_tcp6_ipv6_parse(s: &str) -> Result<SocketAddr, String> {
         0,
     )))
 }
-/*
-fn v6_be_to_le(ip: u128) -> [u16; 8] {
-    [
-        ((ip >> (11 * 8)) & 0xff00) as u16 | ((ip >> (13 * 8)) & 0x00ff) as u16,
-        ((ip >> (13 * 8)) & 0xff00) as u16 | ((ip >> (15 * 8)) & 0x00ff) as u16,
-        ((ip >> (7 * 8)) & 0xff00) as u16 | ((ip >> (9 * 8)) & 0x00ff) as u16,
-        ((ip >> (9 * 8)) & 0xff00) as u16 | ((ip >> (11 * 8)) & 0x00ff) as u16,
-        ((ip >> (3 * 8)) & 0xff00) as u16 | ((ip >> (5 * 8)) & 0x00ff) as u16,
-        ((ip >> (5 * 8)) & 0xff00) as u16 | ((ip >> (7 * 8)) & 0x00ff) as u16,
-        ((ip << (1 * 8)) & 0xff00) as u16 | ((ip >> (1 * 8)) & 0x00ff) as u16,
-        ((ip >> (1 * 8)) & 0xff00) as u16 | ((ip >> (3 * 8)) & 0x00ff) as u16,
-    ]
-}
-*/
-
 fn v6_be_to_bytes(ip: u128) -> [u8; 16] {
     [
         ((ip >> (12 * 8)) & 0xff) as u8,
