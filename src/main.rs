@@ -135,10 +135,11 @@ fn list() -> Result<(), String> {
         return Err("Could not list processes".to_string());
     }
     println!(
-        "{:>47}\t{:>47}\t{:>8}\t{:>5}\tinode",
-        "local", "remote", "pid", "fd"
+        "{:>47}\t{:>47}\t{:>8}\t{:>5}\t{:>12}\tinode",
+        "local", "remote", "pid", "fd", "comm",
     );
     for pid in pids {
+        let comm = fs::read_to_string(format!("/proc/{}/comm", pid)).unwrap_or(String::new());
         // ignore errors, /proc is inherently flaky and for all we know it could be a disappeared or different process
         if let Ok(dir) = fs::read_dir(format!("/proc/{}/fd", pid)) {
             for fd in dir.filter_map(|res| res.ok()) {
@@ -154,8 +155,9 @@ fn list() -> Result<(), String> {
                                 .map_err(|e| format!("Parse error: {e}"))?;
                             if let Some(stream) = streams.get(&inode) {
                                 println!(
-                                    "{stream}\t{pid:>8}\t{:>5}\t{inode}",
+                                    "{stream}\t{pid:>8}\t{:>5}\t{:>12}\t{inode}",
                                     fd.file_name().to_string_lossy(),
+                                    comm.trim()
                                 );
                             }
                         }
