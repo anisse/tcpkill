@@ -249,22 +249,11 @@ fn proc_net_tcp6_ipv6_parse(s: &str) -> Result<SocketAddr, String> {
     )))
 }
 fn v6_be_to_bytes(ip: u128) -> [u8; 16] {
+    let b = ip.to_le_bytes();
     [
-        ((ip >> (12 * 8)) & 0xff) as u8,
-        ((ip >> (13 * 8)) & 0xff) as u8,
-        ((ip >> (14 * 8)) & 0xff) as u8,
-        ((ip >> (15 * 8)) & 0xff) as u8,
-        ((ip >> (8 * 8)) & 0xff) as u8,
-        ((ip >> (9 * 8)) & 0xff) as u8,
-        ((ip >> (10 * 8)) & 0xff) as u8,
-        ((ip >> (11 * 8)) & 0xff) as u8,
-        ((ip >> (4 * 8)) & 0xff) as u8,
-        ((ip >> (5 * 8)) & 0xff) as u8,
-        ((ip >> (6 * 8)) & 0xff) as u8,
-        ((ip >> (7 * 8)) & 0xff) as u8,
-        ((ip >> (0 * 8)) & 0xff) as u8,
-        ((ip >> (1 * 8)) & 0xff) as u8,
-        ((ip >> (2 * 8)) & 0xff) as u8,
-        ((ip >> (3 * 8)) & 0xff) as u8,
+        b[12], b[13], b[14], b[15], //
+        b[8], b[9], b[10], b[11], //
+        b[4], b[5], b[6], b[7], //
+        b[0], b[1], b[2], b[3], //
     ]
 }
