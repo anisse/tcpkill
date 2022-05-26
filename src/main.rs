@@ -181,7 +181,7 @@ fn proc_streams(
     streams: &mut HashMap<u64, Stream>,
 ) -> Result<(), String> {
     for line in fs::read_to_string(proc_file)
-        .map_err(|e| format!("Cannot /proc/net/tcp: {}", IoErr::from(e)))?
+        .map_err(|e| format!("Cannot open {}: {}", proc_file, IoErr::from(e)))?
         .lines()
         .skip(1)
     {
