@@ -123,50 +123,107 @@ fn format_addr(addr: SocketAddr) -> String {
 
 fn list() -> Result<(), String> {
     let streams = streams()?;
-    //let mut sockets = Vec::new();
-    let pids: Vec<_> = fs::read_dir("/proc")
-        .map_err(|e| format!("opening /proc: {e}"))?
-        .filter_map(|res| res.ok()) // discard errors for individual files
-        .map(|f| f.file_name().into_string()) // keep only basename from path, and only Strings
-        .filter_map(|res| res.ok()) // valid utf-8 only
-        .filter(|f| f.as_bytes().iter().all(|c| c.is_ascii_digit())) // only pids (digit-only strings)
-        .collect();
-    if pids.is_empty() {
-        return Err("Could not list processes".to_string());
+    let mut comms: HashMap<u32, String> = HashMap::new();
+    for (i, sock) in SocketFdIterator::new()?.enumerate() {
+        let sock = sock?;
+        if i == 0 {
+            println!(
+                "{:>47}\t{:>47}\t{:>8}\t{:>5}\t{:>12}\tinode",
+                "local", "remote", "pid", "fd", "comm",
+            );
+        }
+        if let Some(stream) = streams.get(&sock.inode) {
+            let comm: &str = comms.entry(sock.pid).or_insert_with(|| {
+                fs::read_to_string(format!("/proc/{}/comm", sock.pid))
+                    .unwrap_or(String::new())
+                    .trim()
+                    .to_string()
+            });
+            println!(
+                "{stream}\t{:>8}\t{:>5}\t{comm:>12}\t{}",
+                sock.pid, sock.fd, sock.inode
+            );
+        }
     }
-    println!(
-        "{:>47}\t{:>47}\t{:>8}\t{:>5}\t{:>12}\tinode",
-        "local", "remote", "pid", "fd", "comm",
-    );
-    for pid in pids {
-        let comm = fs::read_to_string(format!("/proc/{}/comm", pid)).unwrap_or(String::new());
-        // ignore errors, /proc is inherently flaky and for all we know it could be a disappeared or different process
-        if let Ok(dir) = fs::read_dir(format!("/proc/{}/fd", pid)) {
-            for fd in dir.filter_map(|res| res.ok()) {
+    Ok(())
+}
+
+struct SocketFd {
+    pid: u32,
+    fd: u32,
+    inode: u64,
+}
+
+struct SocketFdIterator {
+    pids: Box<dyn Iterator<Item = String>>,
+    fds: Option<fs::ReadDir>,
+    pid: u32,
+}
+
+impl SocketFdIterator {
+    fn new() -> Result<Self, String> {
+        Ok(SocketFdIterator {
+            pids: Box::new(
+                fs::read_dir("/proc")
+                    .map_err(|e| format!("opening /proc: {e}"))?
+                    .filter_map(|res| res.ok()) // discard errors for individual files
+                    .map(|f| f.file_name().into_string()) // keep only basename from path, and only Strings
+                    .filter_map(|res| res.ok()) // valid utf-8 only
+                    .filter(|f| f.as_bytes().iter().all(|c| c.is_ascii_digit())), // only pids (digit-only strings)
+            ),
+            fds: None,
+            pid: 0,
+        })
+    }
+    fn nextfd(fds: &mut Option<fs::ReadDir>, pid: u32) -> Option<Result<SocketFd, String>> {
+        if let Some(dirs) = fds {
+            for fd in dirs.filter_map(|res| res.ok()) {
                 if let Ok(link) = fs::read_link(fd.path()) {
                     if let Some(s) = link.to_str() {
                         if s.starts_with("socket:[") {
-                            let inode: u64 = s
-                                .strip_prefix("socket:[")
-                                .ok_or("Convert error".to_string())?
-                                .strip_suffix("]")
-                                .ok_or("Convert error".to_string())?
-                                .parse()
-                                .map_err(|e| format!("Parse error: {e}"))?;
-                            if let Some(stream) = streams.get(&inode) {
-                                println!(
-                                    "{stream}\t{pid:>8}\t{:>5}\t{:>12}\t{inode}",
-                                    fd.file_name().to_string_lossy(),
-                                    comm.trim()
-                                );
+                            fn inode(s: &str) -> Result<u64, String> {
+                                Ok(s.strip_prefix("socket:[")
+                                    .ok_or(format!("impossible parse error ?"))?
+                                    .strip_suffix("]")
+                                    .ok_or(format!("parse ] error"))?
+                                    .parse()
+                                    .map_err(|e| format!("Parse error: {e}"))?)
                             }
+                            let inode = match inode(s) {
+                                Err(x) => return Some(Err(x)),
+                                Ok(x) => x,
+                            };
+                            return Some(Ok(SocketFd {
+                                pid,
+                                fd: fd.file_name().to_string_lossy().parse::<u32>().unwrap(),
+                                inode,
+                            }));
                         }
                     }
                 }
             }
         }
+        None
     }
-    Ok(())
+}
+
+impl Iterator for SocketFdIterator {
+    type Item = Result<SocketFd, String>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(fd) = SocketFdIterator::nextfd(&mut self.fds, self.pid) {
+            return Some(fd);
+        }
+        let (pids, fds) = (&mut *self.pids, &mut self.fds);
+        for pid in pids {
+            self.pid = pid.parse().unwrap();
+            *fds = fs::read_dir(format!("/proc/{}/fd", pid)).ok(); //ignore open errors
+            if let Some(fd) = SocketFdIterator::nextfd(fds, self.pid) {
+                return Some(fd);
+            }
+        }
+        None
+    }
 }
 
 fn streams() -> Result<HashMap<u64, Stream>, String> {
