@@ -4,7 +4,7 @@ use std::os::unix::prelude::FromRawFd;
 
 use uapi::{getsockopt, pidfd_getfd, pidfd_open, setsockopt};
 
-pub fn tcpkill(pid: i32, targetfd: i32) -> Result<(), String> {
+pub fn tcpkill_pidfd(pid: i32, targetfd: i32) -> Result<(), String> {
     let fd = pidfd_open(pid, 0).map_err(|e| format!("Cannot open pid: {}", IoErr::from(e)))?;
     let sock = pidfd_getfd(fd.raw(), targetfd, 0).map_err(|e| match e.0 {
         uapi::c::EPERM => String::from(

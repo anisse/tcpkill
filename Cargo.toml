@@ -10,9 +10,13 @@ license = "MIT"
 
 [dependencies]
 uapi = "0.2.0"
-#clap = "3.1.18"
+netlink-sys = "0.8.3"
 
 [dependencies.clap]
 version = "3.1.18"
 default-features = false
 features = ["suggestions", "std", "derive"]
+
+[dependencies.netlink-packet-sock-diag]
+git = "https://github.com/anisse/netlink"
+branch = "sock-destroy"

@@ -1,10 +1,12 @@
 mod socketiter;
 mod streams;
 mod tcpkill;
+mod tcpkill_netlink;
 
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::net::IpAddr;
 
 use clap::{Parser, Subcommand};
 
@@ -26,13 +28,31 @@ enum Commands {
     },
     /// List tcp connections, basically like ss -tpn
     List,
+    /// Kill a single TCP connection by saddr+sport+daddr+dport
+    NLDestroy {
+        source_address: IpAddr,
+        source_port: u16,
+        destination_address: IpAddr,
+        destination_port: u16,
+    },
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Single { pid, fd } => tcpkill::tcpkill(*pid as i32, *fd as i32)?,
+        Commands::Single { pid, fd } => tcpkill::tcpkill_pidfd(*pid as i32, *fd as i32)?,
         Commands::List => list()?,
+        Commands::NLDestroy {
+            source_address,
+            source_port,
+            destination_address,
+            destination_port,
+        } => tcpkill_netlink::netlink_kill(
+            *source_address,
+            *source_port,
+            *destination_address,
+            *destination_port,
+        )?,
     }
 
     Ok(())
