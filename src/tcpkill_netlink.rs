@@ -1,9 +1,11 @@
 use std::net::IpAddr;
 
+use netlink_packet_core::{
+    NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_ACK, NLM_F_REQUEST,
+};
 use netlink_packet_sock_diag::{
-    constants::*,
     inet::{ExtensionFlags, InetRequest, SocketId, StateFlags},
-    NetlinkHeader, NetlinkMessage, NetlinkPayload, SockDiagDestroy, SockDiagMessage,
+    SockDiagDestroy, SockDiagMessage, AF_INET, AF_INET6, IPPROTO_TCP, SOCK_DESTROY,
 };
 use netlink_sys::{protocols::NETLINK_SOCK_DIAG, Socket, SocketAddr};
 
@@ -12,13 +14,12 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
     let _port_number = socket.bind_auto().unwrap().port_number();
     socket.connect(&SocketAddr::new(0, 0)).unwrap();
 
-    let mut packet = NetlinkMessage {
-        header: NetlinkHeader {
-            flags: NLM_F_REQUEST | NLM_F_ACK,
-            message_type: SOCK_DESTROY,
-            ..Default::default()
-        },
-        payload: SockDiagDestroy::new(SockDiagMessage::InetRequest(InetRequest {
+    let mut hdr = NetlinkHeader::default();
+    hdr.flags = NLM_F_REQUEST | NLM_F_ACK;
+    hdr.message_type = SOCK_DESTROY;
+    let mut packet = NetlinkMessage::new(
+        hdr,
+        SockDiagDestroy::new(SockDiagMessage::InetRequest(InetRequest {
             family: match saddr {
                 IpAddr::V4(_) => AF_INET,
                 IpAddr::V6(_) => AF_INET6,
@@ -36,7 +37,7 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
             },
         }))
         .into(),
-    };
+    );
 
     packet.finalize();
 
@@ -68,12 +69,8 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
                 NetlinkPayload::InnerMessage(SockDiagMessage::InetResponse(response)) => {
                     println!("{:#?}", response);
                 }
-                NetlinkPayload::Done => {
+                NetlinkPayload::Done(_) => {
                     println!("Done!");
-                    return Ok(());
-                }
-                NetlinkPayload::Ack(_err) => {
-                    println!("Ack!");
                     return Ok(());
                 }
                 NetlinkPayload::Error(_) | NetlinkPayload::Overrun(_) | _ => {

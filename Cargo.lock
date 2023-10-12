@@ -141,19 +141,19 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "netlink-packet-core"
-version = "0.4.2"
-source = "git+https://github.com/anisse/netlink?branch=sock-destroy#297a24732036a083c18f91b220b6c3976cadcc18"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72724faf704479d67b388da142b186f916188505e7e0b26719019c525882eda4"
 dependencies = [
  "anyhow",
  "byteorder",
- "libc",
  "netlink-packet-utils",
 ]
 
 [[package]]
 name = "netlink-packet-sock-diag"
-version = "0.3.1"
-source = "git+https://github.com/anisse/netlink?branch=sock-destroy#297a24732036a083c18f91b220b6c3976cadcc18"
+version = "0.4.2"
+source = "git+https://github.com/anisse/netlink-packet-sock-diag?branch=sock-destroy#33579af76e9727224410f6c27d1ff2ebecb442f3"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -166,8 +166,9 @@ dependencies = [
 
 [[package]]
 name = "netlink-packet-utils"
-version = "0.5.1"
-source = "git+https://github.com/anisse/netlink?branch=sock-destroy#297a24732036a083c18f91b220b6c3976cadcc18"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ede8a08c71ad5a95cdd0e4e52facd37190977039a4704eb82a283f713747d34"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -303,6 +304,7 @@ name = "tcpkill"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "netlink-packet-core",
  "netlink-packet-sock-diag",
  "netlink-sys",
  "uapi",
