@@ -9,11 +9,11 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uapi = "0.2.0"
-netlink-sys = "0.8.3"
+uapi = "0.2.10"
+netlink-sys = "0.8.5"
 
 [dependencies.clap]
-version = "3.1.18"
+version = "3.2.25"
 default-features = false
 features = ["suggestions", "std", "derive"]
 
