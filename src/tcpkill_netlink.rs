@@ -49,7 +49,7 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
 
     packet.serialize(&mut buf[..]);
 
-    println!(">>> {:?}", packet);
+    //println!(">>> {:?}", packet);
     if let Err(e) = socket.send(&buf[..], 0) {
         println!("SEND ERROR {}", e);
         return Err(format!("SEND ERROR {}", e));
@@ -61,8 +61,8 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
         loop {
             let bytes = &receive_buffer[offset..];
             let rx_packet = <NetlinkMessage<SockDiagMessage>>::deserialize(bytes).unwrap();
-            println!("<<< {:?}", rx_packet);
-            println!("payload {:?}", rx_packet.payload);
+            //println!("<<< {:?}", rx_packet);
+            //println!("payload {:?}", rx_packet.payload);
 
             match rx_packet.payload {
                 NetlinkPayload::Noop => {}
