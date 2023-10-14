@@ -73,9 +73,14 @@ pub fn netlink_kill(saddr: IpAddr, sport: u16, daddr: IpAddr, dport: u16) -> Res
                     println!("Done!");
                     return Ok(());
                 }
-                NetlinkPayload::Error(_) | NetlinkPayload::Overrun(_) | _ => {
-                    return Err("wat".to_string())
+                NetlinkPayload::Error(message) => {
+                    return match message.code {
+                        Some(_) => Err(format!("sock destroy netlink response: {message}")),
+                        None => Ok(()),
+                    }
                 }
+                NetlinkPayload::Overrun(o) => return Err(format!("Overrun: {o:?}")),
+                _ => return Err("unhandled error".to_string()),
             }
 
             offset += rx_packet.header.length as usize;
